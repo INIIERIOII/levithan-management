@@ -1,0 +1,151 @@
+﻿@page
+@model LeviathanAuctionHouse.Pages.productactionsModel
+@using MySql.Data.MySqlClient;
+@using System.Data;
+@using Newtonsoft.Json;
+
+@{
+    Layout = null;
+    var action = Request.Query["action"];
+    var result = "ajax error";
+
+    MySqlConnection conn;
+    string server = "localhost";
+    string database = "leviathanauction";
+    string uid = "root";
+    string password = "12345678";
+    string connectionString = "SERVER=" + server + ";" + "DATABASE=" +
+    database + ";" + "UID=" + uid + ";" + "PASSWORD=" + password + ";SSL Mode=None;";
+    conn = new MySqlConnection(connectionString);
+
+    try
+    {
+        conn.Open();
+    }
+    catch (Exception)
+    {
+        @Html.Raw("มีปัญหาการเชื่อมต่อฐานข้อมูล")
+        return;
+    }
+
+    if (action == "select")
+    {
+        var query = Request.Query["query"];
+
+        string sqlCmd = " SELECT products.ProductID, products.ProductName, products.Unit, products.CategoryID, categories.CategoryName, products.Price "
+
+                      + " FROM products "
+
+                      + " INNER JOIN categories "
+                      + " ON categories.CategoryID = products.CategoryID"
+
+                      + " WHERE products.ProductID LIKE @p1 "
+                      + " OR products.ProductName LIKE @p1"
+                      + " OR products.Unit LIKE @p1"
+                      + " OR products.CategoryID LIKE @p1"
+                      + " OR products.Price LIKE @p1"
+
+                      + " OR categories.CategoryName LIKE @p1";
+
+        MySqlCommand cmd = new MySqlCommand(sqlCmd, conn);
+        cmd.Parameters.AddWithValue("@p1", "%" + query + "%");
+        MySqlDataReader reader = cmd.ExecuteReader(); //SQL
+
+        DataTable dt = new DataTable(); //C#
+        dt.Load(reader);
+
+        string json_string = JsonConvert.SerializeObject(dt); //JSON
+        result = json_string;
+
+    }
+    else if (action == "insert")
+    {
+        var product_id = Request.Query["product_id"];
+        var product_name = Request.Query["product_name"];
+        var unit = Request.Query["unit"];
+        var category_id = Request.Query["category_id"];
+        var price = Request.Query["price"];
+
+        string sqlCmd = "INSERT INTO products VALUES(@p1, @p2, @p3, @p4, @p5)";
+        MySqlCommand cmd = new MySqlCommand(sqlCmd, conn);
+        cmd.Parameters.AddWithValue("@p1", product_id);
+        cmd.Parameters.AddWithValue("@p2", product_name);
+        cmd.Parameters.AddWithValue("@p3", unit);
+        cmd.Parameters.AddWithValue("@p4", category_id);
+        cmd.Parameters.AddWithValue("@p5", price);
+
+        cmd.ExecuteNonQuery();
+
+        //ทำการเพิ่มข้อมูลไปยังฐานข้อมูล
+        result = "ajax insert success" + " "
+               + product_id + " "
+               + product_name + " "
+               + unit + " "
+               + category_id + " "
+               + price + " ";
+
+    }
+    else if (action == "delete")
+    {
+        var product_id = Request.Query["product_id"];
+        string sqlCmd = "DELETE FROM products WHERE ProductID = @pid";
+        MySqlCommand cmd = new MySqlCommand(sqlCmd, conn);
+        cmd.Parameters.AddWithValue("@pid", product_id);
+        cmd.ExecuteNonQuery();
+
+        result = "ajax delete success";
+    }
+    else if (action == "update")
+    {
+        var product_id = Request.Query["product_id"];
+        var product_name = Request.Query["product_name"];
+        var unit = Request.Query["unit"];
+        var category_id = Request.Query["category_id"];
+        var price = Request.Query["price"];
+
+        string sqlCmd = "UPDATE products "
+                      + " SET ProductName = @p2, "
+                      + " Unit = @p3, "
+                      + " CategoryID = @p4, "
+                      + " Price = @p5 "
+                      + " WHERE ProductID = @p1";
+        MySqlCommand cmd = new MySqlCommand(sqlCmd, conn);
+        cmd.Parameters.AddWithValue("@p1", product_id);
+        cmd.Parameters.AddWithValue("@p2", product_name);
+        cmd.Parameters.AddWithValue("@p3", unit);
+        cmd.Parameters.AddWithValue("@p4", category_id);
+        cmd.Parameters.AddWithValue("@p5", price);
+
+        cmd.ExecuteNonQuery();
+
+
+        //ทำการแก้ไขข้อมูลไปยังฐานข้อมูล
+        result = "ajax update success";
+
+    }
+    else if (action == "fetch_single")
+    {
+        //ทำการลบข้อมูลไปยังฐานข้อมูล
+        var query = Request.Query["query"];
+        //System.Diagnostics.Debug.WriteLine("XXXXD" + query); //เป็นการ debug ตัวแปรฝั่ง server
+        string sqlCmd = "SELECT * FROM products "
+                      + " WHERE ProductID = @p1 ";
+
+        MySqlCommand cmd = new MySqlCommand(sqlCmd, conn);
+        cmd.Parameters.AddWithValue("@p1", query);
+        MySqlDataReader reader = cmd.ExecuteReader();
+
+        DataTable dt = new DataTable();
+        dt.Load(reader);
+
+        string json_string = JsonConvert.SerializeObject(dt);
+        result = json_string;
+
+    }
+    else
+    {
+        result = "unknow action";
+    }
+}
+
+@Html.Raw(result)

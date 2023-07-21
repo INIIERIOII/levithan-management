@@ -1,0 +1,245 @@
+﻿@page
+@model LeviathanAuctionHouse.Pages.productsuiModel
+@{
+}
+
+<head>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+	<script>
+		$(document).ready(function () {
+			selectData("");
+
+			$("#insert").click(function () { insertData(); });
+			$("#update").click(function () { updateData(); });
+			$("#delete").click(function () { deleteData($("#product_id").val()); });
+			$("#search").click(function () { selectData($("#query").val()); });
+
+			$(document).on('click', '.edit', function () {
+				var id = $(this).attr("id");
+				fetchSingleData(id);
+
+			});
+
+			$(document).on('click', '.delete', function () {
+				var id = $(this).attr("id");
+				var result = confirm("Want to delete this product id = " + id + " ?");
+				if (result) deleteData(id);
+
+			});
+		});
+
+		function selectData(query) {
+            $.ajax({
+                url: "./productactions",
+                method: "GET",
+                headers: { "RequestVerificationToken": $('input[name="__RequestVerificationToken"]').val() },
+                data: { 
+                    action : "select" ,
+                    query  : query
+                }, 
+                dataType: "json",
+                success: function(data) { 
+                    var table = CreateTableFromJSON(data);
+                    var divContainer = $("#result");
+                    divContainer.addClass("table table-striped");
+                    divContainer.html(table);
+                },
+
+                error: function (xhr, ajaxOptions, thrownError) {
+                    alert("selectData() Error");
+                }
+            });
+
+        }
+
+        function insertData() {
+            $.ajax({
+                url: "./productactions",
+                method: "GET",
+                headers: { "RequestVerificationToken": $('input[name="__RequestVerificationToken"]').val() },
+                data: {
+                    action: "insert",
+                    product_id: $("#product_id").val(),
+                    product_name: $("#product_name").val(),
+                    unit: $("#unit ").val(),
+                    category_id: $("#category_id").val(),
+                    price: $("#price").val()
+                },
+                success: function (data) {
+                    alert(data);
+                    selectData("");
+                },
+                error: function (xhr, ajaxOptions, thrownError) {
+                    alert("insertData() Error");
+                }
+            });
+        }
+
+        function updateData() {
+            $.ajax({
+                url: "./productactions",
+                method: "GET",
+                headers: { "RequestVerificationToken": $('input[name="__RequestVerificationToken"]').val() },
+                data: {
+                    action: "update",
+                    product_id: $("#product_id").val(),
+                    product_name: $("#product_name").val(),
+                    unit: $("#unit ").val(),
+                    category_id: $("#category_id").val(),
+                    price: $("#price").val(),
+                },
+                success: function (data) {
+                    alert(data);
+                    selectData("");
+                },
+                error: function (xhr, ajaxOptions, thrownError) {
+                    alert(thrownError);
+                }
+            });
+        }
+
+        function deleteData(ProductID) {
+            $.ajax({
+                url: "./productactions",
+			    method: "GET",
+			    headers: { "RequestVerificationToken": $('input[name="__RequestVerificationToken"]').val() },
+			    data: { 
+                    action: "delete" ,
+                    product_id: ProductID
+			    },
+			    success: function (data) { 
+                    alert(data);
+                    selectData("");
+                },
+			    error: function (xhr, ajaxOptions, thrownError) {
+                    alert("deleteData() Error");
+                }
+		    });
+        }
+
+        function CreateTableFromJSON(json_data) {
+            if (json_data.length == 0) return "";
+
+            var col = [];
+            for (var key in json_data[0]) {
+                if (col.indexOf(key) === -1) {
+                    col.push(key);
+                }
+            }
+
+            // CREATE DYNAMIC TABLE.
+            var table = document.createElement("table");
+
+            var tr = table.insertRow(-1);                   // TABLE ROW.
+
+            for (var i = 0; i < col.length; i++) {
+                var th = document.createElement("th");      // TABLE HEADER.
+                th.innerHTML = col[i];
+                tr.appendChild(th);
+            }
+
+            var edit_header = document.createElement("th");      // TABLE HEADER.
+            edit_header.innerHTML = "แก้ไขข้อมูล";
+            tr.appendChild(edit_header);
+
+            var delete_header = document.createElement("th");      // TABLE HEADER.
+            delete_header.innerHTML = "ลบข้อมูล";
+            tr.appendChild(delete_header);
+
+
+
+            for (var i = 0; i < json_data.length; i++) {
+
+                tr = table.insertRow(-1);
+
+                for (var j = 0; j < col.length; j++) {
+                    var tabCell = tr.insertCell(-1);
+                    tabCell.innerHTML = json_data[i][col[j]];
+                }
+
+                var id = json_data[i][col[0]];
+
+                var tabCell = tr.insertCell(-1);
+                tabCell.innerHTML = '<button type="button" name="edit" class="btn btn-primary btn-xs edit" id="' + id + '">Edit</button>';
+
+                tabCell = tr.insertCell(-1);
+                tabCell.innerHTML = '<button type="button" name="delete" class="btn btn-primary btn-xs delete" id="' + id + '">Delete</button>';
+
+
+            }
+
+            return table;
+
+        }
+
+        function fetchSingleData(id) {
+            $.ajax({
+                url: "./productactions",
+                method: "GET",
+                headers: { "RequestVerificationToken": $('input[name="__RequestVerificationToken"]').val() },
+                data: {
+                    action: "fetch_single",
+                    query: id
+                },
+                dataType: "json",
+                success: function (data) {
+                    if (data.lenth < 1) return;
+                    $("#product_id").val(data[0]["ProductID"]);
+                    $("#product_name").val(data[0]["ProductName"]);
+                    $("#unit").val(data[0]["Unit"]);
+                    $("#category_id").val(data[0]["CategoryID"]);
+                    $("#price").val(data[0]["Price"]);
+                },
+                error: function (xhr, ajaxOptions, thrownError) {
+                    alert("fetchSingleData() Error");
+                }
+            });
+        }
+	</script>
+</head>
+
+<form>
+	@Html.AntiForgeryToken()
+
+	<div class="form-group">
+		<label>ProductID</label>
+		<input type="text" name="product_id" id="product_id" class="form-control" />
+	</div>
+
+	<div class="form-group">
+        <label>ProductName</label>
+		<input type="text" name="product_name" id="product_name" class="form-control" />
+	</div>
+
+	<div class="form-group">
+		<label>Unit</label>
+		<input type="text" name="unit" id="unit" class="form-control" />
+	</div>
+
+	<div class="form-group">
+		<label>CategoryID</label>
+		<input type="text" name="category_id" id="category_id" class="form-control" />
+	</div>
+
+	<div class="form-group">
+		<label>Price</label>
+		<input type="text" name="price" id="price" class="form-control" />
+	</div>
+	<br>
+
+	<div class="form-group">
+		<input type="button" id="insert" value="เพิ่ม" />
+		<input type="button" id="update" value="แก้ไข" />
+		<input type="button" id="delete" value="ลบ" />
+	</div>
+	<br>
+	<div class="form-group">
+		ค้นหาข้อมูลสินค้า:
+		<input type="text" name="query" id="query" />
+		<input type="button" id="search" value="ค้นหา" />
+	</div>
+
+	<div id="result"></div>
+
+</form>
+
